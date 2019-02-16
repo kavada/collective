@@ -59,7 +59,7 @@
 									<div>${item.title}</div>
 									<div>$${item.data.price}</div>
 									<div class="collective-wrapper">
-										${item.data.filter.pet.map(pet => `<div>${pet}</div>` ).join('') }
+										${item.data.filter.pet.map(pet => `<div onclick="collective.modal('${pet}')">${pet}</div>` ).join('') }
 									</div>
 								</div>
 							</div>

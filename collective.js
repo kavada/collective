@@ -247,4 +247,8 @@ class Collective {
 		console.log(data);
 	}
 
+	modal(name) {
+		console.log(name);
+	}
+
 }
