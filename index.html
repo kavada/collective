@@ -37,14 +37,18 @@
 				"content":{
 					"has":true,
 					"type":["grid"],
-					"markup":`${data.map(item => `<div class="collective-item collective-xs-100 collective-sm-50 collective-md-33">
+					"markup":`${data.map((item,index) => `<div class="collective-item collective-item-${index} collective-xs-100 collective-sm-50 collective-md-33">
 							<div class="collective-item-container">
 								<img src="${item.image}" width="100px">
 								<div class="collective-item-info">
-									${item.title}
+									<div>${item.title}</div>
+									<div>$${item.data.price}</div>
+									<div class="collective-wrapper">
+										${item.data.filter.pet.map(pet => `<div>${pet}</div>` ).join('') }
+									</div>
 								</div>
 							</div>
-						</div>`)}`
+						</div>`).join('@@')}`
 				},
 				"pagination":{
 					"has":true,

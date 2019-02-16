@@ -216,7 +216,6 @@ class Collective {
 		jQuery('.collective-pagination-btn').on('click', function() {
 			let item, btn;
 			item = jQuery(this);
-			console.log(item.data('pagination'));
 			switch(item.data('pagination')) {
 				case 'prev':
 					if(data.collective.page > 2) { data.collective.page -= 1; }
@@ -237,8 +236,7 @@ class Collective {
 		list = jQuery('.collective-pagination-list');
 		list.html('<div class="collective-pagination-item collective-wrapper">'+data.collective.page+' of '+data.collective.pages+'</div>');
 
-		markup = data.layout.content.markup.replace(/<\/div>,<div/g, '</div>@@<div');
-		markup = markup.split('@@');
+		markup = data.layout.content.markup.split('@@');
 		data.collective.filteredItems.forEach(function(element,index) {
 			if(index >= data.collective.group[0] && index < data.collective.group[1]) {
 				block = collective.renderItem(markup[index]);
