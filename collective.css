@@ -33,6 +33,19 @@ body {
 	background: #f6f6f7;
 }
 
+.collective-filter-container {
+    padding: 10px;
+}
+
+.collective-filter-collection-title {
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+.collective-filter-list {
+    padding: 10px;
+}
+
 .collective-bar {
 	position: fixed;
 	width: 100%;

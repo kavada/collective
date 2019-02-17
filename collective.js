@@ -26,7 +26,6 @@ class Collective {
 	build(data) {
 		this.app = jQuery('.'+data.id);
 		if(this.app.length > 0) {
-			console.log('exists');
 			this.app.addClass('collective-app');
 			this.data = data;
 			this.layout(data);
@@ -47,8 +46,10 @@ class Collective {
 		let data, container, content;
 		data = this.data;
 		container = data.id+'-filter';
-		content = '<div class="collective-filter '+container+'">filter</div>';
+		content = `<div class="collective-filter `+container+`"><div class="collective-filter-container"></div></div>`;
 		this.app.append(content);
+		data.collective.filtered = this.renderFilter(data);
+		this.buildFilter();
 	}
 
 	loadContent() {
@@ -74,6 +75,114 @@ class Collective {
 		content = '<div class="collective-pagination '+container+'">pagination</div>';
 		jQuery('.collective-content').append(content);
 		this.renderContent(data,'initial');
+	}
+
+	renderFilter(data) {
+		let filter, collective, collections;
+		filter = data.layout.filter;
+		collective = {
+			"collections": [],
+			"filters": []
+		};
+		collections = this.getCollections(data);
+		if(collections.size > 0) {
+			collections.forEach(value => {
+				collective.collections.push(value);
+				collective.filters[value] = {"set": new Set(), "filter":[], "filterItems":{}};
+			});
+		}
+		this.getFilters(data,collective);
+		return collective;
+	}
+
+	getCollections(data) {
+		let collections = new Set();
+		data.data.map((item,index) => {
+			if(item.data.collection.length > 1) {
+
+			}
+			else {
+				if(data.layout.filter.dynamic.exclude.includes(item.data.collection[0])) {
+
+				}
+				else {
+					collections.add(item.data.collection[0]);
+				}
+			}
+		});
+		return collections;
+	}
+
+	getFilters(data,obj) {
+		data.data.map((item,index) => {
+			item.data.collection.map((collection,i) => {
+				Object.keys(item.data.filter).forEach(value => {
+					obj.filters[collection].set.add(value)
+				});
+			});
+		});
+		obj.collections.map((item, index) => {
+			if(obj.filters[item].set.size > 0) {
+				obj.filters[item].set.forEach(value => {
+					obj.filters[item].filter.push(value);
+					obj.filters[item].filterItems[value] = {"set": new Set(), "filter":[]};
+				});
+			}
+		});
+		this.getfilterItems(data,obj);
+	}
+
+	getfilterItems(data,obj) {
+		data.data.map((item,index) => {
+			item.data.collection.map((collection,i) => {
+				Object.keys(item.data.filter).forEach(value => {
+					if(Array.isArray(item.data.filter[value])) {
+						item.data.filter[value].map(v => obj.filters[collection].filterItems[value].set.add(v));
+					}
+					else {
+						if(item.data.filter[value]) {
+							obj.filters[collection].filterItems[value].set.add(item.data.filter[value]);
+						}
+					}
+				});
+			});
+		});
+		obj.collections.map(items => {
+			let collection;
+			collection = obj.filters[items];
+			collection.filter.map(value => {
+				collection.filterItems[value].set.forEach(item => {
+					collection.filterItems[value].filter.push(item);
+				});
+			});
+		});
+	}
+
+	buildFilter() {
+		let data, filter, active, markup, collective = new Collective();
+		data = this.data;
+		filter = data.collective.filtered;
+		active = data.layout.bar.collections.dynamic.set;
+		filter.collections.map(collection => {
+			if(collection == active) {
+				`${filter.filters[collection].filter.map((item) => {
+					jQuery('.collective-filter-container').append(`
+						<div class="collective-filter-collection">
+							<div class="collective-filter-collection-title">${item}</div>
+							<div class="collective-filter-list">
+								${filter.filters[collection].filterItems[item].filter.map(value => {
+									return `<div onclick="collective.filterItems({'filter':'${item}','value':'${value}'})">${value}</div>`
+								}).join('')}
+							</div>
+						</div>
+					</div>`)
+				}).join('')}`
+			}
+		});
+	}
+
+	filterItems(data) {
+		console.log(data);
 	}
 
 	renderContent(data,local) {
@@ -194,12 +303,8 @@ class Collective {
 
 	}
 
-	renderItem(element) {
-		return element
-	}
-
 	renderPagination(data) {
-		let container, content, list, block, markup, collective = new Collective();
+		let container, content, list, markup, collective = new Collective();
 		container = jQuery('.collective-pagination');
 		content = 	`<div class="collective-pagination-container collective-wrapper">
 						<div class="collective-pagination-btn" data-event="paginate" data-pagination="prev">
@@ -238,12 +343,9 @@ class Collective {
 		markup = data.layout.content.markup.split('@@');
 		data.collective.filteredItems.forEach(function(element,index) {
 			if(index >= data.collective.group[0] && index < data.collective.group[1]) {
-				block = collective.renderItem(markup[index]);
-				jQuery('.collective-content-container').append(block);
+				jQuery('.collective-content-container').append(markup[index]);
 			}
 		});
-
-		console.log(data);
 	}
 
 	modal(name) {
