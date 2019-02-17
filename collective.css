@@ -25,11 +25,19 @@ body {
 }
 
 .collective-filter {
+	position: fixed;
+	top: 0px;
+	left: 0px;
 	width: 300px;
+	height: 100vh;
+	background: #f6f6f7;
 }
 
 .collective-bar {
-	
+	position: fixed;
+	width: 100%;
+	height: 45px;
+	background: #e0e0e0;
 }
 
 .collective-content {
@@ -39,7 +47,11 @@ body {
 }
 
 .collective-content-container {
-	padding: 10px;
+	padding: 5px;
+}
+
+.collective-item-container {
+	margin: 5px;
 }
 
 .collective-content.hasBar .collective-content-container {

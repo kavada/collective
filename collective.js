@@ -188,7 +188,6 @@ class Collective {
 				data.collective.group = [0,data.perPage];
 			}
 			data.collective.pages = Math.ceil(data.collective.filteredItems.length/data.layout.pagination.perPage);
-			console.log(data.collective.filteredItems.length, data.layout.pagination.perPage);
 		}
 
 		this.renderPagination(data);
