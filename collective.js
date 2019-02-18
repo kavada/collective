@@ -48,8 +48,6 @@ class Collective {
 		container = data.id+'-filter';
 		content = `<div class="collective-filter `+container+`"><div class="collective-filter-container"></div></div>`;
 		this.app.append(content);
-		data.collective.filtered = this.renderFilter(data);
-		this.buildFilter();
 	}
 
 	loadContent() {
@@ -64,7 +62,12 @@ class Collective {
 		let data, container, content;
 		data = this.data;
 		container = data.id+'-bar';
-		content = '<div class="collective-bar '+container+'">bar</div>';
+		content = `<div class="collective-bar `+container+`">
+						<div class="collective-bar-container collective-wrapper">
+							<div class="collective-bar-list collective-wrapper"></div>
+							<div class="collective-bar-sort">sort</div>
+						</div>
+					</div>`;
 		jQuery('.collective-content').addClass('hasBar').prepend(content);
 	}
 
@@ -74,7 +77,14 @@ class Collective {
 		container = data.id+'-pagination';
 		content = '<div class="collective-pagination '+container+'">pagination</div>';
 		jQuery('.collective-content').append(content);
-		this.renderContent(data,'initial');
+		this.reRender(data);
+	}
+
+	reRender(data) {
+		data.collective.filtered = this.renderFilter(data);
+		this.buildBar(data);
+		this.buildFilter(data);
+		this.renderContent(data,'rerender');
 	}
 
 	renderFilter(data) {
@@ -102,12 +112,7 @@ class Collective {
 
 			}
 			else {
-				if(data.layout.filter.dynamic.exclude.includes(item.data.collection[0])) {
-
-				}
-				else {
-					collections.add(item.data.collection[0]);
-				}
+				collections.add(item.data.collection[0]);
 			}
 		});
 		return collections;
@@ -158,9 +163,18 @@ class Collective {
 		});
 	}
 
-	buildFilter() {
-		let data, filter, active, markup, collective = new Collective();
-		data = this.data;
+	buildBar(data) {
+		jQuery('.collective-bar-list').html(''); // remove content
+		`${data.collective.filtered.collections.map((collection) => {
+			jQuery('.collective-bar-list').append(`
+				<div class="collective-bar-item" onclick="collective.barItem('${collection}')">${collection}</div>
+			`)
+		}).join('')}`
+	}
+
+	buildFilter(data) {
+		let filter, active, markup, collective = new Collective();
+		jQuery('.collective-filter-container').html(''); // remove content
 		filter = data.collective.filtered;
 		active = data.layout.bar.collections.dynamic.set;
 		filter.collections.map(collection => {
@@ -179,6 +193,13 @@ class Collective {
 				}).join('')}`
 			}
 		});
+	}
+
+	barItem(value) {
+		let data = this.data;
+		data.layout.filter.dynamic.set = value;
+		data.layout.bar.collections.dynamic.set = value;
+		this.reRender(data);
 	}
 
 	filterItems(data) {
