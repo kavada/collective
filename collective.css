@@ -69,9 +69,12 @@ body {
     width: calc(100% - 100px);
 }
 
+.collective-bar-item.active {
+	font-weight: 800;
+}
+
 .collective-bar-item {
     text-transform: uppercase;
-    font-weight: 800;
     font-size: 13px;
     margin: 0px 3px;
     padding: 3px;

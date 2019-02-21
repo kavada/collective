@@ -1,6 +1,7 @@
 class Collective {
 
 	init(data) {
+		console.log(data);
 		if(this.checkData(data)) {
 			data.collective = {
 				"filter": {},
@@ -140,13 +141,13 @@ class Collective {
 	getCollections(data) {
 		let collections = new Set();
 		data.data.map((item,index) => {
-			item.show = [1,1,1];
+			item.show = [];
 			item.id = index;
-			if(item.data.collection.length > 1) {
+			if(item.collection.length > 1) {
 
 			}
 			else {
-				collections.add(item.data.collection[0]);
+				collections.add(item.collection[0]);
 			}
 		});
 		return collections;
@@ -154,8 +155,8 @@ class Collective {
 
 	getFilters(data,obj) {
 		data.data.map((item,index) => {
-			item.data.collection.map((collection,i) => {
-				Object.keys(item.data.filter).forEach(value => {
+			item.collection.map((collection,i) => {
+				Object.keys(item.filter).forEach(value => {
 					obj.filters[collection].set.add(value)
 				});
 			});
@@ -174,14 +175,14 @@ class Collective {
 
 	getfilterItems(data,obj) {
 		data.data.map((item,index) => {
-			item.data.collection.map((collection,i) => {
-				Object.keys(item.data.filter).forEach(value => {
-					if(Array.isArray(item.data.filter[value])) {
-						item.data.filter[value].map(v => obj.filters[collection].filterItems[value].set.add(v));
+			item.collection.map((collection,i) => {
+				Object.keys(item.filter).forEach(value => {
+					if(Array.isArray(item.filter[value])) {
+						item.filter[value].map(v => obj.filters[collection].filterItems[value].set.add(v));
 					}
 					else {
-						if(item.data.filter[value]) {
-							obj.filters[collection].filterItems[value].set.add(item.data.filter[value]);
+						if(item.filter[value]) {
+							obj.filters[collection].filterItems[value].set.add(item.filter[value]);
 						}
 					}
 				});
@@ -199,10 +200,12 @@ class Collective {
 	}
 
 	buildBar(data) {
+		let active;
 		jQuery('.collective-bar-list').html(''); // remove content
 		`${data.collective.filtered.collections.map((collection) => {
+			if(collection == data.rendered.set) { active = 'active'; } else { active = ''; }
 			jQuery('.collective-bar-list').append(`
-				<div class="collective-bar-item" onclick="collective.barItem('${collection}')">${collection}</div>
+				<div class="collective-bar-item ${active}" onclick="collective.barItem('${collection}'); jQuery(this).siblings().removeClass('active'); jQuery(this).addClass('active')">${collection}</div>
 			`)
 		}).join('')}`
 	}
@@ -220,7 +223,7 @@ class Collective {
 							<div class="collective-filter-collection-title">${item}</div>
 							<div class="collective-filter-list">
 								${filter.filters[collection].filterItems[item].filter.map(value => {
-									return `<div class="collective-filter-item" onclick="collective.filterItems(this,{'name':'${item}','value':'${value}'})">${value}</div>`
+									return `<div class="collective-filter-item" onclick="collective.filterItems(this,{'name':'${item}','value':'${value}'});">${value}</div>`
 								}).join('')}
 							</div>
 						</div>
@@ -231,11 +234,14 @@ class Collective {
 	}
 
 	barItem(value) {
-		let data = this.data;
+		let data;
+		data = this.data;
 		data.rendered.set = value;
 		data.layout.filter.dynamic.set = value;
 		data.layout.bar.collections.dynamic.set = value;
+		data.rendered.uniqueFilter = [];
 		this.reRender(data,'bar');
+		console.log(data);
 	}
 
 	filterItems(element,value) {
@@ -293,20 +299,41 @@ class Collective {
 			data.rendered.uniqueFilter.map(item => {
 				data.data.forEach(function(element,index) {
 					data.data[index].show = [];
-					if(element.data.collection == data.rendered.set) {
-						Object.keys(data.data[index].data.filter).map((items, indexes) => {
+						if(element.collection.includes(data.rendered.set)) {
 							
-							if(data.rendered.filters[data.rendered.set][items].includes(data.data[index].data.filter[items])) {
-								data.data[index].show.push(1);
-							}
-							else {
+							Object.keys(data.data[index].filter).map((items, indexes) => {
+
+							// if(data.data[index].filter.hasOwnProperty(items)) {
+							// 	console.log('has property');
 								if(data.rendered.filters[data.rendered.set][items].length < 1) {
 									data.data[index].show.push(1);
 								}
 								else {
-									data.data[index].show.push(0);
+									if(data.rendered.filters[data.rendered.set][items].includes(data.data[index].filter[items])) {
+										data.data[index].show.push(1);
+									}
+									else {
+										data.data[index].show.push(0);	
+									}
 								}
-							}
+							// }
+							// else {
+							// 	console.log('does not have property');	
+							// }
+							// if(data.rendered.filters[data.rendered.set][items].includes(data.data[index].filter[items])) {
+							// 	data.data[index].show.push(1);
+							// }
+							// else {
+							// 	if(data.data[index].filter[items].hasOwnProperty(items)) {
+									
+							// 		else {
+							// 			data.data[index].show.push(0);
+							// 		}
+							// 	}
+							// 	else {
+							// 		data.data[index].show.push(0);
+							// 	}
+							// }
 
 						});
 						data.data[index].id = index;
@@ -318,8 +345,8 @@ class Collective {
 			data.rendered.uniqueMarkup = [];
 			data.rendered.markup = [];
 			data.data.forEach(function(element,index) {
-				element.show = [1,1,1];
-				if(element.data.collection == data.rendered.set) {
+				element.show = [];
+				if(element.collection.includes(data.rendered.set)) {
 					data.rendered.markup.push(markup[index]);
 				}
 			});
@@ -342,7 +369,7 @@ class Collective {
 
 		data.rendered.uniqueMarkup = [];
 		data.data.forEach(function(element,index) {
-			if(element.data.collection == data.rendered.set) {
+			if(element.collection.includes(data.rendered.set)) {
 				sum = element.show.reduce(function(a, b) { return a + b; }, 0);
 				if(element.show.length == sum) {
 					data.rendered.uniqueMarkup.push(data.rendered.masterMarkup[index]);
