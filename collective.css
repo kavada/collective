@@ -46,6 +46,14 @@ body {
     padding: 10px;
 }
 
+.collective-filter-item.active {
+	font-weight: 600;
+}
+
+.collective-filter-item {
+
+}
+
 .collective-bar {
     position: fixed;
     width: calc(100% - 300px);
@@ -80,7 +88,9 @@ body {
 }
 
 .collective-content-container {
-	padding: 5px;
+    padding: 5px;
+    align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .collective-item-container {

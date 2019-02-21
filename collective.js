@@ -3,12 +3,10 @@ class Collective {
 	init(data) {
 		if(this.checkData(data)) {
 			data.collective = {
-				"count":data.data.length,
-				"group":[0,data.layout.pagination.perPage],
-				"pages":Math.ceil(data.data.length/data.layout.pagination.perPage),
-				"page":1,
-				"filter":[],
-				"filteredItems":[]
+				"filter": {},
+				"uniqueFilter":[],
+				"filtered": this.renderFilter(data),
+				"filteredItems":[],
 			};
 			this.build(data);
 		}
@@ -77,14 +75,29 @@ class Collective {
 		container = data.id+'-pagination';
 		content = '<div class="collective-pagination '+container+'">pagination</div>';
 		jQuery('.collective-content').append(content);
-		this.reRender(data);
+		this.reRender(data,'pagination');
 	}
 
-	reRender(data) {
-		data.collective.filtered = this.renderFilter(data);
-		this.buildBar(data);
-		this.buildFilter(data);
-		this.renderContent(data,'rerender');
+	reRender(data,name) {
+
+		switch(name) {
+			case 'filter':
+				// data.collective.uniqueFilter = this.renderFilterItems(data.collective.filter);
+			break;
+			case 'bar':
+				// this.renderCollective(data);
+				// data.rendered.uniqueFilter = [];
+				this.buildFilter(data);
+				
+			break;
+			case 'pagination':
+				this.buildBar(data);
+				this.buildFilter(data);
+			break;
+		}
+
+		this.renderContent(data);
+
 	}
 
 	renderFilter(data) {
@@ -99,15 +112,36 @@ class Collective {
 			collections.forEach(value => {
 				collective.collections.push(value);
 				collective.filters[value] = {"set": new Set(), "filter":[], "filterItems":{}};
+				data.rendered.filters[value] = {};
 			});
 		}
 		this.getFilters(data,collective);
 		return collective;
 	}
 
+	renderFilterItems(array) {
+		const output = [];
+		array.forEach(function(item) {
+		  var existing = output.filter(function(v, i) {
+		    return v.name == item.name;
+		  });
+		  if (existing.length) {
+		    var existingIndex = output.indexOf(existing[0]);
+		    output[existingIndex].value = output[existingIndex].value.concat(item.value);
+		  } else {
+		    if (typeof item.value == 'string')
+		      item.value = [item.value];
+		    output.push(item);
+		  }
+		});
+		return output;
+	}
+
 	getCollections(data) {
 		let collections = new Set();
 		data.data.map((item,index) => {
+			item.show = [1,1,1];
+			item.id = index;
 			if(item.data.collection.length > 1) {
 
 			}
@@ -130,7 +164,8 @@ class Collective {
 			if(obj.filters[item].set.size > 0) {
 				obj.filters[item].set.forEach(value => {
 					obj.filters[item].filter.push(value);
-					obj.filters[item].filterItems[value] = {"set": new Set(), "filter":[]};
+					obj.filters[item].filterItems[value] = {"set": new Set(), "filter":[], "active":[]};
+					data.rendered.filters[item][value] = [];
 				});
 			}
 		});
@@ -185,7 +220,7 @@ class Collective {
 							<div class="collective-filter-collection-title">${item}</div>
 							<div class="collective-filter-list">
 								${filter.filters[collection].filterItems[item].filter.map(value => {
-									return `<div onclick="collective.filterItems({'filter':'${item}','value':'${value}'})">${value}</div>`
+									return `<div class="collective-filter-item" onclick="collective.filterItems(this,{'name':'${item}','value':'${value}'})">${value}</div>`
 								}).join('')}
 							</div>
 						</div>
@@ -197,136 +232,142 @@ class Collective {
 
 	barItem(value) {
 		let data = this.data;
+		data.rendered.set = value;
 		data.layout.filter.dynamic.set = value;
 		data.layout.bar.collections.dynamic.set = value;
-		this.reRender(data);
+		this.reRender(data,'bar');
 	}
 
-	filterItems(data) {
-		console.log(data);
+	filterItems(element,value) {
+		let data, item, curFilter, curIndex;
+		data = this.data;
+		item = jQuery(element);
+		if(item.hasClass('active')) {
+			item.removeClass('active');
+			curFilter = data.rendered.filters[data.layout.filter.dynamic.set][value.name];
+			curIndex = curFilter.indexOf(value.value);
+			if (curIndex > -1) {
+				curFilter.splice(curIndex, 1);
+			}
+		}
+		else {
+			item.addClass('active');
+			data.rendered.filters[data.layout.filter.dynamic.set][value.name].push(value.value);
+		}
+		this.checkFilters();
+		this.renderContent(data);
+		this.rePaginate(data);
+	}
+
+	checkFilters() {
+		let data, currentSet, unique = [];
+		data = this.data;
+		currentSet = data.layout.filter.dynamic.set;
+		Object.keys(data.rendered.filters[currentSet]).map(v => {
+			if(data.rendered.filters[currentSet][v].length > 0) {
+				unique.push({"filter":v,"value":data.rendered.filters[currentSet][v]})
+			}
+		});
+		data.rendered.uniqueFilter = unique;
+	}
+
+	rePaginate(data) {
+		data.collective.count = data.rendered.uniqueMarkup.length;
+		data.collective.group = [0,data.layout.pagination.perPage];
+		data.collective.pages = Math.ceil(data.rendered.uniqueMarkup.length/data.layout.pagination.perPage);
+		data.collective.page = 1;
+		jQuery('.collective-pagination-list').html('<div class="collective-pagination-item collective-wrapper">'+data.collective.page+' of '+data.collective.pages+'</div>');
+	}
+
+	compareObjects(a,b) {
+		return JSON.stringify(a) === JSON.stringify(b);
 	}
 
 	renderContent(data,local) {
-		let container, content, item, items = new Set();
-		container = jQuery('.collective-content-container');
-		container.html('');	
-		
-		// has filter
-		if(data.collective.filter.length > 0) {
-			data.collective.filteredItems = [];
-			if(data.data.length > 0) {
-				for (var i = 0; i < data.data.length; i++) {
-					data.data[i].show = true;
-					data.data[i].id = i;
-					// for (var ii = 0; ii < data.filter.length; ii++) {
-					// 	switch(data.filter[ii].name) {
-					// 		case 'price':
-					// 			let price, prices, min, max;
-					// 			price = Math.round(data.data[i].data.price);
-					// 			prices = data.filter[ii].value.split('-');
-					// 			min = parseInt(prices[0]);
-					// 			max = parseInt(prices[1]);
-					// 			if(data.data[i].data.price >= min && data.data[i].data.price <= max) {
-					// 				if(data.data[i].show == true) {
-					// 					products.add(data.data[i]);
-					// 					data.data[i].show = true;
-					// 				}
-					// 				else {
-					// 					data.data[i].show = false;
-					// 				}
-					// 			}
-					// 			else {
-					// 				data.data[i].show = false;
-					// 			}
-					// 		break;
-					// 		default:
-					// 			if(Array.isArray(data.data[i].data.filter[data.filter[ii].name])) {
-					// 				if(data.data[i].data.filter[data.filter[ii].name].includes(data.filter[ii].value)) {
-					// 					if(data.data[i].show == true) {
-					// 						products.add(data.data[i]);
-					// 						data.data[i].show = true;
-					// 					}
-					// 					else {
-					// 						data.data[i].show = false;
-					// 					}
-					// 				}
-					// 				else {
-					// 					data.data[i].show = false;
-					// 				}
-					// 			}
-					// 			else {
-					// 				if(data.data[i].data.filter[data.filter[ii].name] == data.filter[ii].value) {
-					// 					if(data.data[i].show == true) {
-					// 						products.add(data.data[i]);
-					// 						data.data[i].show = true;
-					// 					}
-					// 					else {
-					// 						data.data[i].show = false;
-					// 					}
-					// 				}
-					// 				else {
-					// 					data.data[i].show = false;
-					// 				}
-					// 			}
-					// 		break;
-					// 	}
-					// }
-				}
-			}
-			else {
-				// no results ... kinda
-			}
-			
-		}
-		// no filter
-		else {
-			items = data.data;
-			for (var i = 0; i < data.data.length; i++) {
-				data.data[i].show = true;
-				data.data[i].id = i;
-			}
-			data.collective.filteredItems = [];
-		}
+		let markup, collective = new Collective();
 
-		let active = 0, notactive = 0;
-		items.forEach(function(item,ex) {
-			if(item.show) {
-				active++;
-				data.collective.filteredItems.push(item);
-			}
-			else {
-				notactive++;
+		markup = data.layout.content.markup.split('@@');
+		data.rendered.masterMarkup = markup;
+
+		if(data.rendered.uniqueFilter.length > 0) {
+			data.rendered.uniqueFilter.map(item => {
+				data.data.forEach(function(element,index) {
+					data.data[index].show = [];
+					if(element.data.collection == data.rendered.set) {
+						Object.keys(data.data[index].data.filter).map((items, indexes) => {
+							
+							if(data.rendered.filters[data.rendered.set][items].includes(data.data[index].data.filter[items])) {
+								data.data[index].show.push(1);
+							}
+							else {
+								if(data.rendered.filters[data.rendered.set][items].length < 1) {
+									data.data[index].show.push(1);
+								}
+								else {
+									data.data[index].show.push(0);
+								}
+							}
+
+						});
+						data.data[index].id = index;
+					}
+				});
+			});
+		}
+		else {
+			data.rendered.uniqueMarkup = [];
+			data.rendered.markup = [];
+			data.data.forEach(function(element,index) {
+				element.show = [1,1,1];
+				if(element.data.collection == data.rendered.set) {
+					data.rendered.markup.push(markup[index]);
+				}
+			});
+			data.rendered.uniqueMarkup = data.rendered.markup;
+		}
+		
+		this.buildPagination(data);
+	}
+
+	renderUniqueContent() {
+		let markup = [];
+		return markup;
+	}
+
+	renderFilteredContent(data) {
+		let container, content, list, sum;
+		container = jQuery('.collective-content-container');
+		list = jQuery('.collective-pagination-list');
+		container.html('');
+
+		data.rendered.uniqueMarkup = [];
+		data.data.forEach(function(element,index) {
+			if(element.data.collection == data.rendered.set) {
+				sum = element.show.reduce(function(a, b) { return a + b; }, 0);
+				if(element.show.length == sum) {
+					data.rendered.uniqueMarkup.push(data.rendered.masterMarkup[index]);
+				}
 			}
 		});
 
-		if(data.page > 1) {
-			console.log('');
-		}
-
-		if(active < 1) {
-			container.html('<div class="collective-content-message collective-wrapper">Unfortunately there are no results for this filter combination</div>');
-			jQuery('.collective-pagination').hide();
-			data.count = 0;
-			data.pages = 0;
-		}
-		else {
-			jQuery('.collective-content-message').remove();
-			jQuery('.collective-pagination').show();
-			data.collective.count = active;
-			if(local == 'filter'){
-				data.collective.page = 1;
-				data.collective.group = [0,data.perPage];
+		data.rendered.uniqueMarkup.map((element,index) => {
+			if(index >= data.collective.group[0] && index < data.collective.group[1]) {
+				container.append(element);
 			}
-			data.collective.pages = Math.ceil(data.collective.filteredItems.length/data.layout.pagination.perPage);
-		}
+		});
 
-		this.renderPagination(data);
-
+		list.html('<div class="collective-pagination-item collective-wrapper">'+data.collective.page+' of '+data.collective.pages+'</div>');
 	}
 
-	renderPagination(data) {
+	buildPagination(data) {
 		let container, content, list, markup, collective = new Collective();
 		container = jQuery('.collective-pagination');
+
+		data.collective.count = data.rendered.uniqueMarkup.length;
+		data.collective.group = [0,data.layout.pagination.perPage];
+		data.collective.pages = Math.ceil(data.rendered.uniqueMarkup.length/data.layout.pagination.perPage);
+		data.collective.page = 1;
+
 		content = 	`<div class="collective-pagination-container collective-wrapper">
 						<div class="collective-pagination-btn" data-event="paginate" data-pagination="prev">
 							<<
@@ -355,18 +396,11 @@ class Collective {
 				break;
 			}
 			data.collective.group = [((data.collective.page - 1) * data.layout.pagination.perPage),(data.collective.page * data.layout.pagination.perPage)];
-			collective.renderContent(data,'paginate');
+			collective.renderFilteredContent(data,'paginate');
 		});
 
-		list = jQuery('.collective-pagination-list');
-		list.html('<div class="collective-pagination-item collective-wrapper">'+data.collective.page+' of '+data.collective.pages+'</div>');
+		this.renderFilteredContent(data);
 
-		markup = data.layout.content.markup.split('@@');
-		data.collective.filteredItems.forEach(function(element,index) {
-			if(index >= data.collective.group[0] && index < data.collective.group[1]) {
-				jQuery('.collective-content-container').append(markup[index]);
-			}
-		});
 	}
 
 	modal(name) {
